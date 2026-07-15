@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dexlens — countryball identifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #151226;
+    --bg-deep: #100e1e;
+    --surface: #1F1B38;
+    --surface-hi: #272247;
+    --line: #332C57;
+    --gold: #F2A93B;
+    --gold-dim: #7a5a26;
+    --aqua: #6FE7DD;
+    --coral: #F26D6D;
+    --text: #F5F1FF;
+    --muted: #A79FC9;
+    --muted-dim: #726B93;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 20% -10%, #241f45 0%, transparent 45%),
+      radial-gradient(circle at 90% 10%, #2a1f3d 0%, transparent 40%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:56px 20px 80px;
+  }
+  .wrap{width:100%; max-width:440px;}
+
+  .brand{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
+  .brand-mark{
+    width:30px; height:30px; border-radius:50%;
+    background:conic-gradient(from 220deg, var(--gold), #f7c874, var(--gold));
+    flex:none;
+  }
+  .brand-name{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700; font-size:22px; letter-spacing:0.01em;
+  }
+  .tagline{color:var(--muted); font-size:14px; margin:0 0 32px 40px;}
+
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:28px 24px 24px;
+  }
+
+  .dropzone{
+    width:220px; height:220px;
+    margin:4px auto 20px;
+    border-radius:50%;
+    position:relative;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    background:var(--bg-deep);
+  }
+  .dropzone svg.ring{position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg);}
+  .dropzone circle.track{fill:none; stroke:var(--line); stroke-width:2; stroke-dasharray:6 8;}
+  .dropzone circle.sweep{fill:none; stroke:var(--gold); stroke-width:2.5; stroke-linecap:round; stroke-dasharray:60 400; opacity:0; transform-origin:50% 50%;}
+  .dropzone.scanning circle.sweep{opacity:1; animation:sweep 1.1s linear infinite;}
+  .dropzone.scanning circle.track{stroke:var(--gold-dim);}
+  .dropzone.filled circle.track{stroke:var(--aqua); stroke-dasharray:none;}
+  @keyframes sweep{ to{ transform:rotate(360deg); } }
+
+  .dz-inner{
+    width:190px; height:190px; border-radius:50%;
+    overflow:hidden; display:flex; align-items:center; justify-content:center;
+    background:var(--surface-hi);
+    text-align:center; padding:20px;
+  }
+  .dz-inner img{width:100%; height:100%; object-fit:cover; display:block;}
+  .dz-hint{color:var(--muted); font-size:13px; line-height:1.5;}
+  .dz-hint svg{display:block; margin:0 auto 10px; width:26px; height:26px; stroke:var(--muted-dim);}
+  .dz-hint b{color:var(--text); font-weight:500;}
+
+  input[type=file]{display:none;}
+
+  .actions{display:flex; gap:10px; margin-top:4px;}
+  button{
+    font-family:'Inter', sans-serif; font-size:14px; font-weight:600;
+    border-radius:12px; border:1px solid var(--line);
+    padding:12px 16px; cursor:pointer;
+    background:var(--surface-hi); color:var(--text);
+    transition:transform .08s ease, border-color .15s ease, opacity .15s ease;
+  }
+  button:active{transform:scale(0.97);}
+  button:disabled{opacity:0.4; cursor:not-allowed;}
+  .btn-primary{
+    flex:1;
+    background:var(--gold); color:#2b1c05; border-color:var(--gold);
+  }
+  .btn-primary:disabled{background:var(--surface-hi); color:var(--muted); border-color:var(--line);}
+  .btn-ghost{background:transparent;}
+
+  .error{
+    margin-top:14px; padding:12px 14px; border-radius:12px;
+    background:rgba(242,109,109,0.12); border:1px solid rgba(242,109,109,0.35);
+    color:#ffb3b3; font-size:13px; line-height:1.5;
+  }
+
+  .result{
+    margin-top:22px; padding-top:22px; border-top:1px solid var(--line);
+  }
+  .result-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+  .eyebrow{font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.08em; color:var(--muted-dim); text-transform:uppercase;}
+  .badge{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; font-weight:600;
+    padding:4px 10px; border-radius:100px; text-transform:uppercase; letter-spacing:.04em;
+  }
+  .badge.high{background:rgba(111,231,221,0.15); color:var(--aqua);}
+  .badge.medium{background:rgba(242,169,59,0.15); color:var(--gold);}
+  .badge.low{background:rgba(242,109,109,0.15); color:var(--coral);}
+
+  .name-row{display:flex; align-items:center; gap:8px; margin-bottom:6px;}
+  .name-input{
+    flex:1; background:transparent; border:none; outline:none;
+    font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:26px;
+    color:var(--text); padding:4px 0; border-bottom:1px solid transparent;
+  }
+  .name-input:focus{border-bottom:1px solid var(--gold);}
+  .copy-btn{
+    flex:none; width:38px; height:38px; padding:0; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--surface-hi);
+  }
+  .copy-btn svg{width:17px; height:17px; stroke:var(--muted);}
+  .copy-btn.copied{background:rgba(111,231,221,0.15); border-color:var(--aqua);}
+  .copy-btn.copied svg{stroke:var(--aqua);}
+
+  .clues{color:var(--muted); font-size:13px; font-style:italic; margin:0 0 16px;}
+
+  .alt-label{font-size:12px; color:var(--muted-dim); margin:0 0 8px;}
+  .alts{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:4px;}
+  .chip{
+    font-size:13px; font-weight:500; padding:7px 12px; border-radius:100px;
+    background:var(--bg-deep); border:1px solid var(--line); color:var(--muted);
+  }
+  .chip:hover{border-color:var(--gold); color:var(--text);}
+
+  .note{
+    margin-top:20px; font-size:12px; line-height:1.6; color:var(--muted-dim);
+  }
+
+  .refcheck{
+    display:flex; align-items:center; gap:10px; margin:2px 0 16px;
+    padding:10px 12px; border-radius:12px; background:var(--bg-deep); border:1px solid var(--line);
+  }
+  .refcheck img{width:44px; height:44px; border-radius:50%; object-fit:cover; flex:none; background:var(--surface-hi);}
+  .refcheck .rc-text{font-size:12px; color:var(--muted); line-height:1.5;}
+  .refcheck .rc-text b{color:var(--text); font-weight:500;}
+
+  .lib{
+    margin-top:24px; padding-top:20px; border-top:1px solid var(--line);
+  }
+  .lib-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .lib-title{font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:15px;}
+  .lib-status{font-size:11px; color:var(--muted-dim); font-family:'IBM Plex Mono', monospace;}
+  .lib-search{
+    width:100%; background:var(--bg-deep); border:1px solid var(--line); border-radius:10px;
+    color:var(--text); font-family:'Inter', sans-serif; font-size:14px; padding:10px 12px;
+    outline:none; margin-bottom:12px;
+  }
+  .lib-search:focus{border-color:var(--gold);}
+  .lib-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(64px, 1fr));
+    gap:10px; max-height:520px; overflow-y:auto; padding-right:4px;
+  }
+  .lib-item{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    cursor:pointer; padding:6px; border-radius:10px; border:1px solid transparent;
+  }
+  .lib-item:hover{background:var(--surface-hi); border-color:var(--line);}
+  .lib-item img{width:44px; height:44px; border-radius:50%; object-fit:cover; background:var(--bg-deep);}
+  .lib-item span{font-size:10px; color:var(--muted); text-align:center; line-height:1.3; max-width:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .lib-empty{color:var(--muted-dim); font-size:13px; padding:12px 2px;}
+
+  .toast{
+    position:fixed; left:50%; bottom:28px; transform:translate(-50%, 20px);
+    background:var(--surface-hi); border:1px solid var(--aqua);
+    color:var(--text); font-size:13px; font-weight:500;
+    padding:10px 18px; border-radius:100px;
+    display:flex; align-items:center; gap:8px;
+    opacity:0; pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .toast svg{width:15px; height:15px; stroke:var(--aqua);}
+  .toast.show{opacity:1; transform:translate(-50%, 0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-name">Dexlens</div>
+  </div>
+  <p class="tagline">Point. Scan. Copy.</p>
+
+  <div class="panel">
+
+    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload a countryball screenshot">
+      <svg class="ring" viewBox="0 0 220 220">
+        <circle class="track" cx="110" cy="110" r="104"></circle>
+        <circle class="sweep" cx="110" cy="110" r="104"></circle>
+      </svg>
+      <div class="dz-inner" id="dzInner">
+        <div class="dz-hint" id="dzHint">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          <b>Drop the spawn screenshot</b><br>or click to browse, or paste with Ctrl+V
+        </div>
+      </div>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*">
+
+    <div class="actions">
+      <button class="btn-primary" id="identifyBtn" disabled>Identify ball</button>
+      <button class="btn-ghost" id="resetBtn" style="display:none;">Reset</button>
+    </div>
+
+    <div class="error" id="errorBox" style="display:none;"></div>
+
+    <div class="result" id="resultBox" style="display:none;">
+      <div class="result-row">
+        <span class="eyebrow">Identified as</span>
+        <span class="badge" id="confBadge">high</span>
+      </div>
+      <div class="name-row">
+        <input class="name-input" id="nameInput" spellcheck="false">
+        <button class="copy-btn" id="copyBtn" aria-label="Copy name">
+          <svg id="copyIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        </button>
+      </div>
+      <p class="clues" id="cluesText"></p>
+
+      <div class="refcheck" id="refcheck" style="display:none;">
+        <img id="refcheckImg" alt="">
+        <div class="rc-text" id="refcheckText"></div>
+      </div>
+
+      <div id="altWrap" style="display:none;">
+        <p class="alt-label">Not quite right? Try:</p>
+        <div class="alts" id="altsList"></div>
+      </div>
+
+      <p class="note">Auto-identified — always double-check against the spawn before trading. Edit the name above if needed; whatever's in the box is what gets copied.</p>
+    </div>
+
+    <div class="lib">
+      <div class="lib-head">
+        <span class="lib-title">Browse the ball library</span>
+        <span class="lib-status" id="libStatus">loading…</span>
+      </div>
+      <input class="lib-search" id="libSearch" placeholder="Search by name — click a result to use it">
+      <div class="lib-grid" id="libGrid"><p class="lib-empty">Loading reference library…</p></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+  <span id="toastText">Copied to clipboard</span>
+</div>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const dzInner = document.getElementById('dzInner');
+const dzHint = document.getElementById('dzHint');
+const fileInput = document.getElementById('fileInput');
+const identifyBtn = document.getElementById('identifyBtn');
+const resetBtn = document.getElementById('resetBtn');
+const errorBox = document.getElementById('errorBox');
+const resultBox = document.getElementById('resultBox');
+const confBadge = document.getElementById('confBadge');
+const nameInput = document.getElementById('nameInput');
+const cluesText = document.getElementById('cluesText');
+const altWrap = document.getElementById('altWrap');
+const altsList = document.getElementById('altsList');
+const copyBtn = document.getElementById('copyBtn');
+const toast = document.getElementById('toast');
+const toastText = document.getElementById('toastText');
+
+let currentImage = null;
+let ballLibrary = [];
+let libraryLoaded = false;
+
+const libStatus = document.getElementById('libStatus');
+const libSearch = document.getElementById('libSearch');
+const libGrid = document.getElementById('libGrid');
+const refcheck = document.getElementById('refcheck');
+const refcheckImg = document.getElementById('refcheckImg');
+const refcheckText = document.getElementById('refcheckText');
+
+const BALL_DATA = [["Umayyad Caliphate","Umayyad_Caliphate"],["British Empire","British_Empire"],["Reichtangle","Reichtangle"],["Mongol Empire","Mongol_Empire"],["Russian Empire","Russian_Empire"],["Roman Empire","Roman_Empire"],["Han Dynasty","Han_Dynasty"],["Qin Dynasty","Qin_Dynasty"],["United States","United_States"],["Polish-Lithuanian Commonwealth","Polish-Lithuanian_Commonwealth"],["Soviet Union","Soviet_Union"],["Austria-Hungary","Austria-Hungary"],["Holy Roman Empire","Holy_Roman_Empire"],["Japanese Empire","Japanese_Empire"],["Akkadian Empire","Akkadian_Empire"],["Hunnic Empire","Hunnic_Empire"],["Kalmar Union","Kalmar_Union"],["Tokugawa Shogunate","Tokugawa_Shogunate"],["Papal States","Papal_States"],["Republic of China","Republic_of_China"],["German Empire","German_Empire"],["Gupta Empire","Gupta_Empire"],["Vatican","Vatican"],["China","China"],["Russia","Russia"],["Austrian Empire","Austrian_Empire"],["Joseon","Joseon"],["Republic of Texas","Republic_of_Texas"],["Ancient Troy","Ancient_Troy"],["India","India"],["Ancient Greece","Ancient_Greece"],["Japan","Japan"],["Korea","Korea"],["Napoleonic France","Napoleonic_France"],["Ottoman Empire","Ottoman_Empire"],["Phoenicia","Phoenicia"],["BRICS","BRICS"],["Republic of Venice","Republic_of_Venice"],["South Korea","South_Korea"],["France","France"],["Spanish Empire","Spanish_Empire"],["United Kingdoms of Sweden and Norway","United_Kingdoms_of_Sweden_and_Norway"],["Achaemenid Empire","Achaemenid_Empire"],["Macedon","Macedon"],["United Kingdom","United_Kingdom"],["Empire of Brazil","Empire_of_Brazil"],["Kingdom of Leinster","Kingdom_of_Leinster"],["Pakistan","Pakistan"],["Sumer","Sumer"],["Ancient Egypt","Ancient_Egypt"],["Brazil","Brazil"],["Byzantium","Byzantium"],["Greenland","Greenland"],["Portuguese Empire","Portuguese_Empire"],["Qing Dynasty","Qing"],["British Raj","British_Raj"],["Carthage","Carthage"],["Italy","Italy"],["Kingdom of Italy","Kingdom_of_Italy"],["Third French Republic","Third_French_Republic"],["Egypt","Egypt"],["Russian Soviet Federative Socialist Republic","Russian_Soviet_Federative_Socialist_Republic"],["Turkey","Turkey"],["French Empire","French_Empire"],["Iran","Iran"],["Kingdom of Greece","Kingdom_of_Greece"],["Konbaung Empire","Konbaung_Empire"],["North German Confederation","North_German_Confederation"],["African Union","African_Union"],["Arab League","Arab_League"],["Confederate States","Confederate_States"],["Gaul","Gaul"],["Germania","Germania"],["Indonesia","Indonesia"],["Kingdom of Hungary","Kingdom_of_Hungary"],["Mayan Empire","Mayan_Empire"],["Yugoslavia","Yugoslavia"],["Germany","Germany"],["Australia","Australia"],["Hong Kong","Hong_Kong"],["Israel","Israel"],["Xiongnu","Xiongnu"],["Swedish Empire","Swedish_Empire"],["Spain","Spain"],["Olmecs","Olmecs"],["Antarctica","Antarctica"],["Ming Dynasty","Ming_Dynasty"],["Saudi Arabia","Saudi_Arabia"],["Xia Dynasty","Xia_Dynasty"],["Franks","Franks"],["League of Nations","League_of_Nations"],["Monaco","Monaco"],["Union of South Africa","Union_of_South_Africa"],["Ukraine","Ukraine"],["Canada","Canada"],["Kingdom of Two Sicilies","Kingdom_of_Two_Sicilies"],["Kingdom of Brandenburg","Kingdom_of_Brandenburg"],["Kingdom of Ulaid","Kingdom_of_Ulaid"],["Poland","Poland"],["Sweden","Sweden"],["Kingdom of Munster","Kingdom_of_Munster"],["Macau","Macau"],["Scotland","Scotland"],["South Africa","South_Africa"],["Greece","Greece"],["Safavid Empire","Safavid_Empire"],["Vietnam","Vietnam"],["Kingdom of Connacht","Kingdom_of_Connacht"],["Parthian Empire","Parthian_Empire"],["Thailand","Thailand"],["North Korea","North_Korea"],["England","England"],["European Union","European_Union"],["Francoist Spain","Francoist_Spain"],["Manchukuo","Manchukuo"],["NATO","NATO"],["Republican Spain","Republican_Spain"],["United Arab Republic","United_Arab_Republic"],["United Nations","United_Nations"],["Warsaw Pact","Warsaw_Pact"],["Weimar Republic","Weimar_Republic"],["Zhou Dynasty","Zhou"],["Argentine Confederation","Argentine_Confederation"],["Armenian Empire","Armenian_Empire"],["Assyrian Empire","Assyrian_Empire"],["ASEAN","ASEAN"],["Kingdom of Hawaii","Kingdom_of_Hawaii"],["Kingdom of Bali","Kingdom_of_Bali"],["Kingdom of Bora Bora","Kingdom_of_Bora_Bora"],["Yuan Dynasty","Yuan_Dynasty"],["Bavaria","Bavaria"],["Algeria","Algeria"],["Argentina","Argentina"],["Bangladesh","Bangladesh"],["Colombia","Colombia"],["Czechia","Czechia"],["Iraq","Iraq"],["Malaysia","Malaysia"],["Mexico","Mexico"],["Myanmar","Myanmar"],["Netherlands","Netherlands"],["Nigeria","Nigeria"],["Norway","Norway"],["Peru","Peru"],["Philippines","Philippines"],["Portugal","Portugal"],["Prussia","Prussia"],["Romania","Romania"],["Singapore","Singapore"],["Switzerland","Switzerland"],["Syria","Syria"],["Tuvalu","Tuvalu"],["United Arab Emirates","UAE"],["Venezuela","Venezuela"],["Kingdom of Cao Wei","Kingdom_of_Cao_Wei"],["Kingdom of Shu Han","Kingdom_of_Shu_Han"],["Kingdom of Sun Wu","Kingdom_of_Sun_Wu"],["Mali Empire","Mali_Empire"],["Ukrainian Soviet Socialist Republic","Ukrainian_Soviet_Socialist_Republic"],["Federal Republic of Central America","Federal_Republic_of_Central_America"],["Ancient Athens","Ancient_Athens"],["Ancient Sparta","Ancient_Sparta"],["Babylon","Babylon"],["Czechoslovakia","Czechoslovakia"],["Ethiopian Empire","Ethiopian_Empire"],["French Indochina","French_Indochina"],["Nauru","Nauru"],["Numidia","Numidia"],["Quebec","Quebec"],["Siam","Siam"],["South Vietnam","South_Vietnam"],["Taiwan","Taiwan"],["Wales","Wales"],["West Germany","West_Germany"],["DR Congo","DR_Congo"],["Kingdom of Egypt","Kingdom_of_Egypt"],["Mughal Empire","Mughal_Empire"],["Angola","Angola"],["Austria","Austria"],["Azerbaijan","Azerbaijan"],["Bahamas","Bahamas"],["Belarus","Belarus"],["Belgium","Belgium"],["Bolivia","Bolivia"],["Bulgaria","Bulgaria"],["Chile","Chile"],["Croatia","Croatia"],["Cuba","Cuba"],["Cyprus","Cyprus"],["Denmark","Denmark"],["Ecuador","Ecuador"],["Ethiopia","Ethiopia"],["Finland","Finland"],["Hungary","Hungary"],["Iberian Union","Iberian_Union"],["Jordan","Jordan"],["Kazakhstan","Kazakhstan"],["Kenya","Kenya"],["Kuwait","Kuwait"],["Libya","Libya"],["Morocco","Morocco"],["North Vietnam","North_Vietnam"],["Oman","Oman"],["Qatar","Qatar"],["San Marino","San_Marino"],["Serbia","Serbia"],["Slovakia","Slovakia"],["Sri Lanka","Sri_Lanka"],["Sudan","Sudan"],["Tunisia","Tunisia"],["Turkmenistan","Turkmenistan"],["Uzbekistan","Uzbekistan"],["Yemen","Yemen"],["Republic of New Granada","Republic_of_New_Granada"],["Faroe Islands","Faroe_Islands"],["Trinidad and Tobago","Trinidad_and_Tobago"],["Orange Free State","Orange_Free_State"],["East Germany","East_Germany"],["Emirate of Nejd","Emirate_of_Nejd"],["Free France","Free_France"],["Golden Horde","Golden_Horde"],["Jamaica","Jamaica"],["Maldives","Maldives"],["Northern Ireland","Northern_Ireland"],["Tibet","Tibet"],["Vichy France","Vichy_France"],["Andorra","Andorra"],["Brunei","Brunei"],["Byelorussian Soviet Socialist Republic","Byelorussian_Soviet_Socialist_Republic"],["Grand Duchy of Tuscany","Grand_Duchy_of_Tuscany"],["Khedivate of Egypt","Khedivate_of_Egypt"],["Micronesia","Micronesia"],["Tonga","Tonga"],["Khmer Empire","Khmer_Empire"],["Barbados","Barbados"],["Kingdom of Saxony","Kingdom_of_Saxony"],["Marshall Islands","Marshall_Islands"],["Armenia","Armenia"],["Bahrain","Bahrain"],["Cambodia","Cambodia"],["Chad","Chad"],["Congo Free State","Congo_Free_State"],["Equatorial Guinea","Equatorial_Guinea"],["Fatimid Caliphate","Fatimid_Caliphate"],["Georgia","Georgia"],["Ghana","Ghana"],["Guatemala","Guatemala"],["Guyana","Guyana"],["Ireland","Ireland"],["Kyrgyzstan","Kyrgyzstan"],["Latvia","Latvia"],["Lithuania","Lithuania"],["Mali","Mali"],["Malta","Malta"],["Mongolia","Mongolia"],["New Zealand","New_Zealand"],["Samoa","Samoa"],["Slovenia","Slovenia"],["Togo","Togo"],["Uganda","Uganda"],["Uruguay","Uruguay"],["Zambia","Zambia"],["Zimbabwe","Zimbabwe"],["Duchy of Limburg","Duchy_of_Limburg"],["Malawi","Malawi"],["Kingdom of Sardinia","Kingdom_of_Sardinia"],["Rashidi Emirate","Rashidi_Emirate"],["Costa Rica","Costa_Rica"],["Dominica","Dominica"],["Guinea-Bissau","Guinea-Bissau"],["Sao Tome and Principe","Sao_Tome_and_Principe"],["Tannu Tuva","Tannu_Tuva"],["Free City of Frankfurt","Free_City_of_Frankfurt"],["Kingdom of Iberia","Kingdom_of_Iberia"],["Seychelles","Seychelles"],["Bosnia and Herzegovina","Bosnia_and_Herzegovina"],["Cote d'Ivoire (Ivory Coast)","Cote_d'Ivoire"],["Afghanistan","Afghanistan"],["Albania","Albania"],["Belize","Belize"],["Botswana","Botswana"],["Cameroon","Cameroon"],["Ceylon","Ceylon"],["Congo","Congo"],["Dominican Republic","Dominican_Republic"],["Eritrea","Eritrea"],["Estonia","Estonia"],["Eswatini","Eswatini"],["Fiji","Fiji"],["Free City of Danzig","Free_City_of_Danzig"],["Gambia","Gambia"],["Haiti","Haiti"],["Honduras","Honduras"],["Khiva","Khiva"],["Laos","Laos"],["Lebanon","Lebanon"],["Liechtenstein","Liechtenstein"],["Moldova","Moldova"],["Mossi Kingdoms","Mossi_Kingdoms"],["Mozambique","Mozambique"],["Nepal","Nepal"],["Nicaragua","Nicaragua"],["Niger","Niger"],["Palestine","Palestine"],["Paraguay","Paraguay"],["Saint Kitts and Nevis (St Kitts and Nevis)","Saint_Kitts_and_Nevis"],["Saint Lucia","Saint_Lucia"],["Somaliland","Somaliland"],["South Sudan","South_Sudan"],["South Yemen","South_Yemen"],["Tajikistan","Tajikistan"],["Tanzania","Tanzania"],["Western Sahara","Western_Sahara"],["Peru-Bolivian Confederation","Peru-Bolivian_Confederation"],["Zapotecs","Zapotecs"],["Cape Verde (Cabo Verde)","Cape_Verde"],["Grenada","Grenada"],["Guinea","Guinea"],["Palau","Palau"],["Solomon Islands","Solomon_Islands"],["St Vincent and the Grenadines","St_Vincent_and_the_Grenadines"],["Vanuatu","Vanuatu"],["Principality of Moldavia","Principality_of_Moldavia"],["Qajar Dynasty","Qajar_Dynasty"],["Antigua and Barbuda","Antigua_and_Barbuda"],["Benin","Benin"],["Bhutan","Bhutan"],["Burkina Faso","Burkina_Faso"],["Burundi","Burundi"],["Central African Republic","Central_African_Republic"],["Comoros","Comoros"],["El Salvador","El_Salvador"],["Gabon","Gabon"],["Hejaz","Hejaz"],["Iceland","Iceland"],["Kiribati","Kiribati"],["Kosovo","Kosovo"],["Lesotho","Lesotho"],["Liberia","Liberia"],["Luxembourg","Luxembourg"],["Madagascar","Madagascar"],["Majapahit","Majapahit"],["Mauritania","Mauritania"],["Mauritius","Mauritius"],["Montenegro","Montenegro"],["Namibia","Namibia"],["Nanda Empire","Nanda_Empire"],["North Macedonia","North_Macedonia"],["Panama","Panama"],["Papua New Guinea","Papua_New_Guinea"],["Paris Commune","Paris_Commune"],["Rwanda","Rwanda"],["Senegal","Senegal"],["Sierra Leone","Sierra_Leone"],["Somalia","Somalia"],["Suriname","Suriname"],["Timor-Leste","Timor-Leste"],["Dahomey","Dahomey"],["Djibouti","Djibouti"]];
+const IMG_BASE = "https://www.ballsdexutilities.app/flag_images/";
+
+function getImgUrl(filename) {
+  return IMG_BASE + encodeURIComponent(filename) + ".webp?v=11.3";
+}
+
+function normalizeName(n){ return (n || '').trim(); }
+
+function loadLibrary(){
+  ballLibrary = BALL_DATA.map(([name, filename]) => ({ name, image: getImgUrl(filename) }));
+  libraryLoaded = true;
+  libStatus.textContent = ballLibrary.length + ' balls';
+  renderLibraryGrid('');
+}
+loadLibrary();
+
+function findInLibrary(name){
+  if(!libraryLoaded || !name) return null;
+  const target = normalizeName(name).toLowerCase();
+  let hit = ballLibrary.find(b => b.name.toLowerCase() === target);
+  if(!hit) hit = ballLibrary.find(b => b.name.toLowerCase().includes(target) || target.includes(b.name.toLowerCase()));
+  return hit || null;
+}
+
+function renderLibraryGrid(query){
+  if(!libraryLoaded) return;
+  const q = query.trim().toLowerCase();
+  const items = q ? ballLibrary.filter(b => b.name.toLowerCase().includes(q)) : ballLibrary;
+  if(!items.length){
+    libGrid.innerHTML = '<p class="lib-empty">No matches. Try a different spelling.</p>';
+    return;
+  }
+  libGrid.innerHTML = '';
+  items.forEach(b => {
+    const el = document.createElement('div');
+    el.className = 'lib-item';
+    el.innerHTML = '<img src="' + b.image + '" loading="lazy" alt=""><span></span>';
+    el.querySelector('span').textContent = b.name;
+    el.addEventListener('click', ()=>{
+      nameInput.value = b.name;
+      confBadge.textContent = 'manual';
+      confBadge.className = 'badge high';
+      cluesText.textContent = '';
+      altWrap.style.display = 'none';
+      showRefCheck(b, 'Picked from the library');
+      resultBox.style.display = 'block';
+      doCopy(true);
+    });
+    libGrid.appendChild(el);
+  });
+}
+
+libSearch.addEventListener('input', ()=> renderLibraryGrid(libSearch.value));
+
+function showRefCheck(hit, label){
+  if(!hit){
+    refcheck.style.display = 'none';
+    return;
+  }
+  refcheckImg.src = hit.image;
+  refcheckText.innerHTML = '<b>' + label + '</b><br>Reference art for "' + hit.name + '" — compare it to your screenshot.';
+  refcheck.style.display = 'flex';
+}
+
+function showToast(msg){
+  toastText.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> toast.classList.remove('show'), 2200);
+}
+
+async function copyText(text){
+  try{
+    await navigator.clipboard.writeText(text);
+    return true;
+  }catch(e){
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      return true;
+    }catch(e2){
+      return false;
+    }
+  }
+}
+
+function markCopied(){
+  copyBtn.classList.add('copied');
+  setTimeout(()=> copyBtn.classList.remove('copied'), 1500);
+}
+
+async function doCopy(showMsg){
+  const ok = await copyText(nameInput.value.trim());
+  if(ok){
+    markCopied();
+    if(showMsg) showToast('Copied "' + nameInput.value.trim() + '" to clipboard');
+  }else{
+    showToast('Could not auto-copy — select the name and copy manually');
+  }
+}
+
+dropzone.addEventListener('click', ()=> fileInput.click());
+dropzone.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') fileInput.click(); });
+
+dropzone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropzone.style.opacity='0.85'; });
+dropzone.addEventListener('dragleave', ()=>{ dropzone.style.opacity='1'; });
+dropzone.addEventListener('drop', (e)=>{
+  e.preventDefault();
+  dropzone.style.opacity='1';
+  if(e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+fileInput.addEventListener('change', ()=>{
+  if(fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+
+document.addEventListener('paste', (e)=>{
+  const items = e.clipboardData && e.clipboardData.items;
+  if(!items) return;
+  for(const item of items){
+    if(item.type.indexOf('image') === 0){
+      const file = item.getAsFile();
+      if(file) handleFile(file);
+      break;
+    }
+  }
+});
+
+function handleFile(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    currentImage = { dataUrl: e.target.result, mediaType: file.type || 'image/png' };
+    dzInner.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = currentImage.dataUrl;
+    dzInner.appendChild(img);
+    dropzone.classList.add('filled');
+    identifyBtn.disabled = false;
+    resetBtn.style.display = 'inline-block';
+    errorBox.style.display = 'none';
+    resultBox.style.display = 'none';
+    // Auto-identify immediately
+    identify();
+  };
+  reader.readAsDataURL(file);
+}
+
+resetBtn.addEventListener('click', ()=>{
+  currentImage = null;
+  dzInner.innerHTML = '';
+  dzInner.appendChild(dzHint);
+  dropzone.classList.remove('filled');
+  identifyBtn.disabled = true;
+  resetBtn.style.display = 'none';
+  errorBox.style.display = 'none';
+  resultBox.style.display = 'none';
+  fileInput.value = '';
+});
+
+identifyBtn.addEventListener('click', identify);
+
+
+function resizeImage(dataUrl, maxSize){
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if(w > maxSize || h > maxSize){
+        if(w > h){ h = Math.round(h * maxSize / w); w = maxSize; }
+        else { w = Math.round(w * maxSize / h); h = maxSize; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    img.src = dataUrl;
+  });
+}
+
+async function identify(){
+  if(!currentImage) return;
+  errorBox.style.display = 'none';
+  resultBox.style.display = 'none';
+  identifyBtn.disabled = true;
+  dropzone.classList.add('scanning');
+  identifyBtn.textContent = 'Scanning…';
+
+  // Downscale image before sending — smaller payload = faster API
+  const base64 = await resizeImage(currentImage.dataUrl, 512);
+
+  const systemPrompt = "You are an expert identifier for Ballsdex, a Discord bot game where players catch and collect countryballs — spherical cartoon characters styled after national flags, historical civilizations, organizations, or fictional entities. You will be shown a screenshot of a countryball that has spawned. Your job is to identify it with maximum precision.\n\nTHE COMPLETE LIST OF 359 VALID BALL NAMES (you must pick ONLY from this list — never invent a name):\nASEAN, Achaemenid Empire, Afghanistan, African Union, Akkadian Empire, Albania, Algeria, Ancient Athens, Ancient Egypt, Ancient Greece, Ancient Sparta, Ancient Troy, Andorra, Angola, Antarctica, Antigua and Barbuda, Arab League, Argentina, Argentine Confederation, Armenia, Armenian Empire, Assyrian Empire, Australia, Austria, Austria-Hungary, Austrian Empire, Azerbaijan, BRICS, Babylon, Bahamas, Bahrain, Bangladesh, Barbados, Bavaria, Belarus, Belgium, Belize, Benin, Bhutan, Bolivia, Bosnia and Herzegovina, Botswana, Brazil, British Empire, British Raj, Brunei, Bulgaria, Burkina Faso, Burundi, Byelorussian Soviet Socialist Republic, Byzantium, Cambodia, Cameroon, Canada, Cape Verde (Cabo Verde), Carthage, Central African Republic, Ceylon, Chad, Chile, China, Colombia, Comoros, Confederate States, Congo, Congo Free State, Costa Rica, Cote d'Ivoire (Ivory Coast), Croatia, Cuba, Cyprus, Czechia, Czechoslovakia, DR Congo, Dahomey, Denmark, Djibouti, Dominica, Dominican Republic, Duchy of Limburg, East Germany, Ecuador, Egypt, El Salvador, Emirate of Nejd, Empire of Brazil, England, Equatorial Guinea, Eritrea, Estonia, Eswatini, Ethiopia, Ethiopian Empire, European Union, Faroe Islands, Fatimid Caliphate, Federal Republic of Central America, Fiji, Finland, France, Francoist Spain, Franks, Free City of Danzig, Free City of Frankfurt, Free France, French Empire, French Indochina, Gabon, Gambia, Gaul, Georgia, German Empire, Germania, Germany, Ghana, Golden Horde, Grand Duchy of Tuscany, Greece, Greenland, Grenada, Guatemala, Guinea, Guinea-Bissau, Gupta Empire, Guyana, Haiti, Han Dynasty, Hejaz, Holy Roman Empire, Honduras, Hong Kong, Hungary, Hunnic Empire, Iberian Union, Iceland, India, Indonesia, Iran, Iraq, Ireland, Israel, Italy, Jamaica, Japan, Japanese Empire, Jordan, Joseon, Kalmar Union, Kazakhstan, Kenya, Khedivate of Egypt, Khiva, Khmer Empire, Kingdom of Bali, Kingdom of Bora Bora, Kingdom of Brandenburg, Kingdom of Cao Wei, Kingdom of Connacht, Kingdom of Egypt, Kingdom of Greece, Kingdom of Hawaii, Kingdom of Hungary, Kingdom of Iberia, Kingdom of Italy, Kingdom of Leinster, Kingdom of Munster, Kingdom of Sardinia, Kingdom of Saxony, Kingdom of Shu Han, Kingdom of Sun Wu, Kingdom of Two Sicilies, Kingdom of Ulaid, Kiribati, Konbaung Empire, Korea, Kosovo, Kuwait, Kyrgyzstan, Laos, Latvia, League of Nations, Lebanon, Lesotho, Liberia, Libya, Liechtenstein, Lithuania, Luxembourg, Macau, Macedon, Madagascar, Majapahit, Malawi, Malaysia, Maldives, Mali, Mali Empire, Malta, Manchukuo, Marshall Islands, Mauritania, Mauritius, Mayan Empire, Mexico, Micronesia, Ming Dynasty, Moldova, Monaco, Mongol Empire, Mongolia, Montenegro, Morocco, Mossi Kingdoms, Mozambique, Mughal Empire, Myanmar, NATO, Namibia, Nanda Empire, Napoleonic France, Nauru, Nepal, Netherlands, New Zealand, Nicaragua, Niger, Nigeria, North German Confederation, North Korea, North Macedonia, North Vietnam, Northern Ireland, Norway, Numidia, Olmecs, Oman, Orange Free State, Ottoman Empire, Pakistan, Palau, Palestine, Panama, Papal States, Papua New Guinea, Paraguay, Paris Commune, Parthian Empire, Peru, Peru-Bolivian Confederation, Philippines, Phoenicia, Poland, Polish-Lithuanian Commonwealth, Portugal, Portuguese Empire, Principality of Moldavia, Prussia, Qajar Dynasty, Qatar, Qin Dynasty, Qing Dynasty, Quebec, Rashidi Emirate, Reichtangle, Republic of China, Republic of New Granada, Republic of Texas, Republic of Venice, Republican Spain, Roman Empire, Romania, Russia, Russian Empire, Russian Soviet Federative Socialist Republic, Rwanda, Safavid Empire, Saint Kitts and Nevis (St Kitts and Nevis), Saint Lucia, Samoa, San Marino, Sao Tome and Principe, Saudi Arabia, Scotland, Senegal, Serbia, Seychelles, Siam, Sierra Leone, Singapore, Slovakia, Slovenia, Solomon Islands, Somalia, Somaliland, South Africa, South Korea, South Sudan, South Vietnam, South Yemen, Soviet Union, Spain, Spanish Empire, Sri Lanka, St Vincent and the Grenadines, Sudan, Sumer, Suriname, Sweden, Swedish Empire, Switzerland, Syria, Taiwan, Tajikistan, Tannu Tuva, Tanzania, Thailand, Third French Republic, Tibet, Timor-Leste, Togo, Tokugawa Shogunate, Tonga, Trinidad and Tobago, Tunisia, Turkey, Turkmenistan, Tuvalu, Uganda, Ukraine, Ukrainian Soviet Socialist Republic, Umayyad Caliphate, Union of South Africa, United Arab Emirates, United Arab Republic, United Kingdom, United Kingdoms of Sweden and Norway, United Nations, United States, Uruguay, Uzbekistan, Vanuatu, Vatican, Venezuela, Vichy France, Vietnam, Wales, Warsaw Pact, Weimar Republic, West Germany, Western Sahara, Xia Dynasty, Xiongnu, Yemen, Yuan Dynasty, Yugoslavia, Zambia, Zapotecs, Zhou Dynasty, Zimbabwe\n\nCRITICAL IDENTIFICATION RULES:\n1. GEOMETRY FIRST — before thinking about color, describe the exact layout: horizontal stripes, vertical stripes, diagonal stripes, cross, saltire, field with central emblem/diamond/circle/star, quadrants, etc.\n2. COUNT STRIPES — how many bands and in what order top-to-bottom or left-to-right.\n3. LOCATE SYMBOLS — any star, crescent, sun, animal, shield, coat of arms, text, circle, triangle — and where it sits (center, canton, top, hoist, etc.)\n4. COLOR IS LAST — only use color to break ties after geometry matches.\n5. COMMON TRAPS: Gabon (3 horizontal bands: green/yellow/blue, NO emblem) vs Brazil (green field, yellow diamond, blue globe); Chad vs Romania (identical blue/yellow/red vertical tricolor — check context); Indonesia vs Poland vs Monaco (horizontal red/white — check which color is on top); many African nations share similar tricolors — count bands and check for symbols carefully.\n\nRespond with strict JSON only — no markdown fences, no text outside the JSON:\n{\"evidence\":\"describe geometry, stripe count/order, and any symbols in under 20 words\",\"primary\":\"exact name from the list above\",\"confidence\":\"high\"|\"medium\"|\"low\",\"alternates\":[\"name1\",\"name2\",\"name3\"]}\n\nAlternates must also be from the valid list. Always provide your best guess — never refuse or return null.";
+
+  try{
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 150,
+        system: systemPrompt,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: currentImage.mediaType, data: base64 } },
+              { type: "text", text: "Identify this countryball." }
+            ]
+          }
+        ]
+      })
+    });
+
+    if(!response.ok){
+      throw new Error('Request failed (' + response.status + ')');
+    }
+
+    const data = await response.json();
+    const textBlock = (data.content || []).map(b => b.text || '').join('').trim();
+    const cleaned = textBlock.replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
+
+    let parsed;
+    try{
+      parsed = JSON.parse(cleaned);
+    }catch(parseErr){
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      if(match) parsed = JSON.parse(match[0]);
+      else throw new Error('Could not read the response');
+    }
+
+    renderResult(parsed);
+
+  }catch(err){
+    errorBox.textContent = "Couldn't identify that ball. " + (err.message || 'Try a clearer screenshot, or enter the name manually below.');
+    errorBox.style.display = 'block';
+    resultBox.style.display = 'block';
+    confBadge.textContent = 'manual';
+    confBadge.className = 'badge low';
+    nameInput.value = '';
+    nameInput.placeholder = 'Type the name manually';
+    cluesText.textContent = '';
+    altWrap.style.display = 'none';
+    refcheck.style.display = 'none';
+  }finally{
+    dropzone.classList.remove('scanning');
+    identifyBtn.disabled = false;
+    identifyBtn.textContent = 'Identify ball';
+  }
+}
+
+function renderResult(parsed){
+  const primary = (parsed.primary || '').trim() || 'Unknown';
+  const confidence = ['high','medium','low'].includes(parsed.confidence) ? parsed.confidence : 'medium';
+  const alternates = Array.isArray(parsed.alternates) ? parsed.alternates.filter(Boolean) : [];
+  const clues = parsed.evidence || parsed.clues || '';
+
+  confBadge.textContent = confidence;
+  confBadge.className = 'badge ' + confidence;
+  nameInput.value = primary;
+  nameInput.placeholder = '';
+  cluesText.textContent = clues ? clues : '';
+
+  const hit = findInLibrary(primary);
+  if(hit){
+    showRefCheck(hit, 'Found in the library');
+  }else if(libraryLoaded){
+    refcheck.style.display = 'none';
+  }else{
+    refcheck.style.display = 'none';
+  }
+
+  altsList.innerHTML = '';
+  if(alternates.length){
+    altWrap.style.display = 'block';
+    alternates.forEach(alt => {
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      const altHit = findInLibrary(alt);
+      if(altHit){
+        chip.innerHTML = '<img src="' + altHit.image + '" alt="" style="width:16px;height:16px;border-radius:50%;object-fit:cover;vertical-align:-3px;margin-right:6px;">' + alt;
+      }else{
+        chip.textContent = alt;
+      }
+      chip.addEventListener('click', ()=>{
+        nameInput.value = alt;
+        showRefCheck(altHit, altHit ? 'Found in the library' : '');
+        doCopy(true);
+      });
+      altsList.appendChild(chip);
+    });
+  }else{
+    altWrap.style.display = 'none';
+  }
+
+  resultBox.style.display = 'block';
+  doCopy(true);
+}
+
+copyBtn.addEventListener('click', ()=> doCopy(true));
+nameInput.addEventListener('change', ()=> doCopy(true));
+</script>
+</body>
+</html>
